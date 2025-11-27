@@ -1,0 +1,3 @@
+.idea
+# Huggingface cached models used in Streamlit app
+models/
