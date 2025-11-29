@@ -161,6 +161,9 @@ if submitted:
                 # Generate response with streaming
                 response_placeholder = st.empty()
                 full_response = ""
+                extracted_json = ""
+                json_started = False
+                brace_count = 0
                 
                 for response in stream_generate(
                     model,
@@ -169,23 +172,49 @@ if submitted:
                     max_tokens=max_tokens,
                     sampler=sampler
                 ):
-                    full_response += response.text
+                    chunk = response.text
+                    full_response += chunk
                     response_placeholder.markdown(full_response + "▌")
+
+                    # Stream processing for JSON extraction
+                    for char in chunk:
+                        if not json_started:
+                            if char == "{":
+                                json_started = True
+                                brace_count = 1
+                                extracted_json += char
+                        else:
+                            extracted_json += char
+                            if char == "{":
+                                brace_count += 1
+                            elif char == "}":
+                                brace_count -= 1
+                                if brace_count == 0:
+                                    break
+                    
+                    # Check if we've closed the main JSON object
+                    if json_started and brace_count == 0:
+                        break
                 
                 response_placeholder.empty()
                 
-                # Clean response (remove prompt if echoed, handle markdown blocks)
-                response_text = full_response.strip()
-                if "[/INST]" in response_text:
-                     response_text = response_text.split("[/INST]")[-1].strip()
-                
-                # Try to strip markdown code blocks if present
-                if response_text.startswith("```json"):
-                    response_text = response_text[7:]
-                if response_text.startswith("```"):
-                    response_text = response_text[3:]
-                if response_text.endswith("```"):
-                    response_text = response_text[:-3]
+                # If we successfully extracted a JSON object, use it. 
+                # Otherwise fall back to the full response (cleaning it as before).
+                if json_started and brace_count == 0:
+                    response_text = extracted_json
+                else:
+                    # Clean response (remove prompt if echoed, handle markdown blocks)
+                    response_text = full_response.strip()
+                    if "[/INST]" in response_text:
+                         response_text = response_text.split("[/INST]")[-1].strip()
+                    
+                    # Try to strip markdown code blocks if present
+                    if response_text.startswith("```json"):
+                        response_text = response_text[7:]
+                    if response_text.startswith("```"):
+                        response_text = response_text[3:]
+                    if response_text.endswith("```"):
+                        response_text = response_text[:-3]
                 
                 response_text = response_text.strip()
 
