@@ -65,3 +65,8 @@ This will launch a web interface at `http://localhost:8501` where you can:
 - Adjust generation parameters (temperature, max tokens, top_p)
 - View chat history
 - Clear conversation and start fresh
+
+### Upload the model to HuggingFace
+```bash
+uv run huggingface-cli upload markvincevarga/mouse artifacts/fused-model .
+```

@@ -1,8 +1,9 @@
 """Streamlit app for chatting with the fine-tuned Mistral model using MLX."""
 
 import streamlit as st
-from mlx_lm import load, generate
+from mlx_lm import generate
 from mlx_lm.sample_utils import make_sampler
+from model_helper import load_model as load_model_helper
 
 # Page configuration
 st.set_page_config(
@@ -12,13 +13,13 @@ st.set_page_config(
 )
 
 # Model path
-MODEL_PATH = "artifacts/fused-model"
+MODEL_REPO = "markvincevarga/mouse"
 
 @st.cache_resource
 def load_model():
     """Load the fine-tuned model and tokenizer."""
     with st.spinner("Loading model... This may take a moment."):
-        model, tokenizer = load(MODEL_PATH)
+        model, tokenizer = load_model_helper(MODEL_REPO)
     return model, tokenizer
 
 def format_chat_prompt(messages):
@@ -75,7 +76,7 @@ with st.sidebar:
         st.rerun()
     
     st.divider()
-    st.caption(f"Model: `{MODEL_PATH}`")
+    st.caption(f"Model: `{MODEL_REPO}`")
 
 # Initialize chat history
 if "messages" not in st.session_state:
@@ -87,7 +88,7 @@ try:
     st.sidebar.success("✅ Model loaded successfully!")
 except Exception as e:
     st.error(f"Error loading model: {e}")
-    st.info("Make sure the model exists at `artifacts/fused-model/`. Run the fine-tuning steps first if you haven't.")
+    st.info(f"Make sure the model exists at `artifacts/fused-model/` or is accessible at {MODEL_REPO}.")
     st.stop()
 
 # Display chat messages
