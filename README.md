@@ -31,10 +31,12 @@ uv run mlx_lm.lora \
     --data artifacts/data \
     --adapter-path artifacts/adapter \
     --train \
-    --iters 50 \
+    --iters 500 \
+    --save-every 50 \
     --batch-size 1 \
     --grad-accumulation-steps 5 \
-    --num-layers 4
+    --num-layers 4 \
+    $([ -f artifacts/adapter/adapters.safetensors ] && echo "--resume-adapter-file artifacts/adapter/adapters.safetensors")
 ```
 
 ### Export the tuned model
