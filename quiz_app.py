@@ -1,6 +1,7 @@
 """Streamlit app for generating quizzes using the fine-tuned Mistral model."""
 
 import streamlit as st
+import streamlit.components.v1 as components
 import json
 import random
 from mlx_lm import stream_generate
@@ -117,8 +118,8 @@ with st.sidebar:
     max_tokens = st.slider(
         "Max Tokens",
         min_value=512,
-        max_value=4096,
-        value=2048,
+        max_value=16384,
+        value=8196,
         step=128,
         help="Maximum number of tokens to generate"
     )
@@ -218,9 +219,6 @@ if submitted:
                 
                 response_text = response_text.strip()
 
-                st.subheader("Generated JSON")
-                st.code(response_text, language="json")
-                
                 # Validate JSON
                 try:
                     json_obj = json.loads(response_text)
@@ -228,18 +226,84 @@ if submitted:
                     # Apply randomization if toggle is on
                     if randomize_toggle:
                         json_obj = randomize_answers(json_obj)
-                        # Update response text to reflect randomization for download
+                        # Update response text to reflect randomization for display and download
                         response_text = json.dumps(json_obj, indent=2)
-                    
+
                     st.success("✅ Valid JSON generated!")
                     
-                    # Download button
-                    st.download_button(
-                        label="Download Quiz JSON",
-                        data=response_text,
-                        file_name=f"{topic.lower().replace(' ', '_')}_quiz.json",
-                        mime="application/json"
-                    )
+                    # Download and Link buttons
+                    col_dl, col_link = st.columns([1, 1])
+                    with col_dl:
+                        st.download_button(
+                            label="Download Quiz JSON",
+                            data=response_text,
+                            file_name=f"{topic.lower().replace(' ', '_')}_quiz.json",
+                            mime="application/json"
+                        )
+                    with col_link:
+                        # JavaScript to copy to clipboard and open URL
+                        # Safe JSON payload for script injection
+                        js_payload = json.dumps(response_text).replace("</script>", "<\\/script>")
+                        
+                        js_script = f"""
+                        <html>
+                            <head>
+                                <style>
+                                    body {{
+                                        margin: 0;
+                                        padding: 0;
+                                        display: flex;
+                                        justify-content: flex-start;
+                                    }}
+                                    button {{
+                                        display: inline-flex;
+                                        align-items: center;
+                                        justify-content: center;
+                                        background-color: #ffffff;
+                                        color: #31333F;
+                                        padding: 0.25rem 0.75rem;
+                                        border-radius: 0.5rem;
+                                        border: 1px solid rgba(49, 51, 63, 0.2);
+                                        cursor: pointer;
+                                        font-family: "Source Sans Pro", sans-serif;
+                                        font-weight: 400;
+                                        font-size: 1rem;
+                                        text-decoration: none;
+                                        line-height: 1.6;
+                                        width: 100%;
+                                        transition: border-color 0.2s, color 0.2s;
+                                    }}
+                                    button:hover {{
+                                        border-color: #ff4b4b;
+                                        color: #ff4b4b;
+                                    }}
+                                    button:active {{
+                                        background-color: #f0f2f6;
+                                    }}
+                                </style>
+                            </head>
+                            <body>
+                                <script>
+                                    async function copyAndOpen() {{
+                                        const text = {js_payload};
+                                        try {{
+                                            await navigator.clipboard.writeText(text);
+                                        }} catch (err) {{
+                                            console.error('Failed to copy:', err);
+                                        }}
+                                        // Open in new tab regardless of copy success
+                                        window.open("https://markvincevarga.github.io/quiz-presenter/?action=new", "_blank");
+                                    }}
+                                </script>
+                                <button onclick="copyAndOpen()">🚀 Open in Quiz Presenter</button>
+                            </body>
+                        </html>
+                        """
+                        components.html(js_script, height=45)
+                        st.caption("Clicking also copies the JSON to clipboard.")
+
+                    st.subheader("Generated JSON")
+                    st.code(response_text, language="json")
                     
                     # Preview
                     with st.expander("Preview Quiz"):
@@ -252,6 +316,8 @@ if submitted:
                                 st.text(f"{prefix} {ans.get('text')}")
                                 
                 except json.JSONDecodeError as je:
+                    st.subheader("Generated JSON (Invalid)")
+                    st.code(response_text, language="json")
                     st.error(f"Generated text is not valid JSON: {je}")
                     st.warning("The model might have included extra text. Check the raw output above.")
 
