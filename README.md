@@ -14,10 +14,10 @@ uv run get_data.py
 ### Set the desired model
 
 ```bash
-BASE_LLM=mistralai/Mistral-7B-Instruct-v0.3
+BASE_LLM=Qwen/Qwen2.5-3B-Instruct
 ```
 
-### Quantize the chosen model to improve performance
+### [Optional] Quantize the chosen model to improve performance
 
 ```bash
 uv run mlx_lm.convert --hf-path ${BASE_LLM} --mlx-path artifacts/quantized-model -q
@@ -27,14 +27,14 @@ uv run mlx_lm.convert --hf-path ${BASE_LLM} --mlx-path artifacts/quantized-model
 
 ```bash
 uv run mlx_lm.lora \
-    --model ${BASE_LLM} \
+    $([ -d artifacts/quantized-model ] && echo "--model artifacts/quantized-model" || echo "--model ${BASE_LLM}") \
     --data artifacts/data \
     --adapter-path artifacts/adapter \
     --train \
     --iters 500 \
     --save-every 50 \
     --batch-size 1 \
-    --grad-accumulation-steps 5 \
+    --grad-accumulation-steps 3 \
     --num-layers 4 \
     $([ -f artifacts/adapter/adapters.safetensors ] && echo "--resume-adapter-file artifacts/adapter/adapters.safetensors")
 ```
@@ -43,7 +43,7 @@ uv run mlx_lm.lora \
 
 ```bash
 uv run mlx_lm.fuse \
-    --model ${BASE_LLM} \
+    $([ -d artifacts/quantized-model ] && echo "--model artifacts/quantized-model" || echo "--model ${BASE_LLM}") \
     --save-path artifacts/fused-model \
     --adapter-path artifacts/adapter
 ```
@@ -52,7 +52,7 @@ uv run mlx_lm.fuse \
 
 ```bash
 uv run mlx_lm.chat \
-    --model ${BASE_LLM} \
+    $([ -d artifacts/quantized-model ] && echo "--model artifacts/quantized-model" || echo "--model ${BASE_LLM}") \
     --adapter-path artifacts/adapter
 ```
 
