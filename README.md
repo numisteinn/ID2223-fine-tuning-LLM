@@ -14,13 +14,13 @@ uv run get_data.py
 ### Set the desired model
 
 ```bash
-BASE_LLM=Qwen/Qwen2.5-3B-Instruct
+BASE_LLM=meta-llama/Llama-3.2-3B-Instruct
 ```
 
 ### [Optional] Quantize the chosen model to improve performance
 
 ```bash
-uv run mlx_lm.convert --hf-path ${BASE_LLM} --mlx-path artifacts/quantized-model -q
+uv run --env-file .env mlx_lm.convert --hf-path ${BASE_LLM} --mlx-path artifacts/quantized-model -q
 ```
 
 ### Run training
@@ -35,9 +35,27 @@ uv run mlx_lm.lora \
     --save-every 50 \
     --batch-size 1 \
     --grad-accumulation-steps 3 \
-    --num-layers 4 \
+    --max-seq-length 2048 \
+    --num-layers 8 \
     $([ -f artifacts/adapter/adapters.safetensors ] && echo "--resume-adapter-file artifacts/adapter/adapters.safetensors")
 ```
+
+### Further fine tune on multiple-choice question/answer dataset
+```bash
+uv run mlx_lm.lora \
+    $([ -d artifacts/quantized-model ] && echo "--model artifacts/quantized-model" || echo "--model ${BASE_LLM}") \
+    --data artifacts/data/mmlu \
+    --adapter-path artifacts/adapter \
+    --train \
+    --iters 500 \
+    --save-every 50 \
+    --batch-size 1 \
+    --grad-accumulation-steps 3 \
+    --max-seq-length 2048 \
+    --num-layers 8 \
+    $([ -f artifacts/adapter/adapters.safetensors ] && echo "--resume-adapter-file artifacts/adapter/adapters.safetensors")
+```
+
 
 ### Export the tuned model
 
