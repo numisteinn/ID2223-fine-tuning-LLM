@@ -14,22 +14,27 @@ uv run get_data.py
 ### Set the desired model
 
 ```bash
-BASE_LLM=meta-llama/Llama-3.2-3B-Instruct
+BASE_LLM=meta-llama/Llama-3.2-1B-Instruct 
+MODEL_ID=$(echo "${BASE_LLM}" | sed 's/\//-/g' | sed 's/:/-/g')
+ARTIFACTS_ROOT="artifacts"
+QUANTIZED_DIR="artifacts/models/${MODEL_ID}/quantized"
+ADAPTER_DIR="artifacts/adapters/${MODEL_ID}"
+FUSED_DIR="artifacts/fused/${MODEL_ID}" 
 ```
 
 ### [Optional] Quantize the chosen model to improve performance
 
 ```bash
-uv run --env-file .env mlx_lm.convert --hf-path ${BASE_LLM} --mlx-path artifacts/quantized-model -q
+uv run --env-file .env mlx_lm.convert --hf-path ${BASE_LLM} --mlx-path ${QUANTIZED_DIR} -q
 ```
 
 ### Run training
 
 ```bash
-uv run mlx_lm.lora \
-    $([ -d artifacts/quantized-model ] && echo "--model artifacts/quantized-model" || echo "--model ${BASE_LLM}") \
-    --data artifacts/data \
-    --adapter-path artifacts/adapter \
+uv run --env-file .env mlx_lm.lora \
+    $([ -d ${QUANTIZED_DIR} ] && echo "--model ${QUANTIZED_DIR}" || echo "--model ${BASE_LLM}") \
+    --data ${ARTIFACTS_ROOT}/data \
+    --adapter-path ${ADAPTER_DIR} \
     --train \
     --iters 500 \
     --save-every 50 \
@@ -37,15 +42,15 @@ uv run mlx_lm.lora \
     --grad-accumulation-steps 3 \
     --max-seq-length 2048 \
     --num-layers 8 \
-    $([ -f artifacts/adapter/adapters.safetensors ] && echo "--resume-adapter-file artifacts/adapter/adapters.safetensors")
+    $([ -f ${ADAPTER_DIR}/adapters.safetensors ] && echo "--resume-adapter-file ${ADAPTER_DIR}/adapters.safetensors")
 ```
 
 ### Further fine tune on multiple-choice question/answer dataset
 ```bash
 uv run mlx_lm.lora \
-    $([ -d artifacts/quantized-model ] && echo "--model artifacts/quantized-model" || echo "--model ${BASE_LLM}") \
-    --data artifacts/data/mmlu \
-    --adapter-path artifacts/adapter \
+    $([ -d ${QUANTIZED_DIR} ] && echo "--model ${QUANTIZED_DIR}" || echo "--model ${BASE_LLM}") \
+    --data ${ARTIFACTS_ROOT}/data/mmlu \
+    --adapter-path ${ADAPTER_DIR} \
     --train \
     --iters 500 \
     --save-every 50 \
@@ -53,25 +58,27 @@ uv run mlx_lm.lora \
     --grad-accumulation-steps 3 \
     --max-seq-length 2048 \
     --num-layers 8 \
-    $([ -f artifacts/adapter/adapters.safetensors ] && echo "--resume-adapter-file artifacts/adapter/adapters.safetensors")
+    $([ -f ${ADAPTER_DIR}/adapters.safetensors ] && echo "--resume-adapter-file ${ADAPTER_DIR}/adapters.safetensors")
 ```
 
 
 ### Export the tuned model
 
+
 ```bash
 uv run mlx_lm.fuse \
-    $([ -d artifacts/quantized-model ] && echo "--model artifacts/quantized-model" || echo "--model ${BASE_LLM}") \
-    --save-path artifacts/fused-model \
-    --adapter-path artifacts/adapter
+    $([ -d ${QUANTIZED_DIR} ] && echo "--model ${QUANTIZED_DIR}" || echo "--model ${BASE_LLM}") \
+    --save-path ${FUSED_DIR} \
+    --adapter-path ${ADAPTER_DIR}
 ```
+
 
 ### Chat with the fine-tuned model (CLI)
 
 ```bash
 uv run mlx_lm.chat \
-    $([ -d artifacts/quantized-model ] && echo "--model artifacts/quantized-model" || echo "--model ${BASE_LLM}") \
-    --adapter-path artifacts/adapter
+    $([ -d ${QUANTIZED_DIR} ] && echo "--model ${QUANTIZED_DIR}" || echo "--model ${BASE_LLM}") \
+    --adapter-path ${ADAPTER_DIR}
 ```
 
 ### Chat with the fine-tuned model (Streamlit UI)
@@ -88,7 +95,7 @@ This will launch a web interface at `http://localhost:8501` where you can:
 
 ### Upload the model to HuggingFace
 ```bash
-uv run huggingface-cli upload markvincevarga/mouse artifacts/fused-model .
+uv run huggingface-cli upload markvincevarga/mouse ${FUSED_DIR} .
 ```
 
 
