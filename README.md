@@ -90,3 +90,37 @@ This will launch a web interface at `http://localhost:8501` where you can:
 ```bash
 uv run huggingface-cli upload markvincevarga/mouse artifacts/fused-model .
 ```
+
+
+### Model Selection and Iteration
+
+We evaluated several models to find the optimal balance between performance and capability:
+- **Mistral 7B**: Provided good quality but, both inference and training were too slow for our use case
+- **Llama 3.2 1B**: Fast but inconsistent at generating structured JSON output
+- **Llama 3.2 3B**: Selected as the optimal middle ground with decent speed and reliable JSON generation
+
+### Two-Phase Training Approach
+We implemented a two-phase fine-tuning strategy to build both general instruction-following and specific quiz generation capabilities:
+
+**Phase 1: Broad Instruction Fine-Tuning**
+- Used the general-purpose finetome100k dataset to establish strong instruction-following foundations
+- Focused on building conversational abilities and general knowledge comprehension
+
+**Phase 2: Structure Polishing**
+- Fine-tuned specifically on structured JSON quiz data to perfect output formatting
+- Emphasized consistent multiple-choice question generation with proper schema adherence
+- Used MMLU dataset to reinforce structured output capabilities
+
+### Model-Centric and Data-Centric Iteration to Improve Model Performance
+
+We employed both model-centric and data-centric approaches to enhance our fine-tuned LLM:
+
+**Model-Centric Methods:**
+- Evaluated our model on a validation set to measure performance
+- Implemented quantization to improve inference speed and reduce memory usage
+- Used LoRA (Low-Rank Adaptation) for efficient parameter fine-tuning
+
+**Data-Centric Methods:**
+- Identified and incorporated an additional dataset for structured output quiz specifically for multiple-choice quiz generation
+- The dataset was derived from the MMLU dataset 
+- Used the MMLU dataset to evaluate the model's ability to generate structured JSON output
