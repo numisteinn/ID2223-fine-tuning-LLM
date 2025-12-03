@@ -1,17 +1,24 @@
-#%%
+# %%
+import re
+from datasets import load_dataset
 import json
+from mlx_lm import generate
+from mlx_lm.utils import load
 import logging
 from jsonschema.validators import Draft202012Validator
 from typing import Any, Dict
 from model_helper import load_model
-import os
+
+# %%
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+
 def safe_ratio(numerator: float, denominator: float) -> float:
     """Return numerator/denominator guarding against zero division."""
     return numerator / denominator if denominator else 0.0
+
 
 def construct_prompt(topic):
     """Construct the prompt for quiz generation."""
@@ -70,7 +77,6 @@ Do not say anything on the lines of "Here is the JSON object:". Do not say anyth
     return f"[INST] {system_instruction}\n\n{user_content} [/INST]"
 
 
-from mlx_lm import generate
 def validate_json_and_schema(validator, quiz_data) -> dict[str, bool]:
     """Validate quiz_data against quiz_schema.json. Returns (is_valid_json, is_valid_schema)."""
     try:
@@ -80,16 +86,20 @@ def validate_json_and_schema(validator, quiz_data) -> dict[str, bool]:
             "valid_json": False,
             "valid_schema": False,
         }
-    return {"valid_json":True, "valid_schema": validator.is_valid(quiz_json)}
-import re
+    return {"valid_json": True, "valid_schema": validator.is_valid(quiz_json)}
+
+
 def get_num_questions(s: str) -> int | None:
     """Extract the number of questions from the prompt."""
-    m = re.search(r'\d+', s)
+    m = re.search(r"\d+", s)
     return int(m.group()) if m else None
 
 
 def evaluate_model(
-    model, tokenizer, validation_data, verbose = False,
+    model,
+    tokenizer,
+    validation_data,
+    verbose=False,
 ) -> Dict[str, Any]:
     """Evaluate a model on validation data."""
     max_tokens: int = 1024
@@ -154,17 +164,18 @@ def print_model_report(label: str, metrics: dict[str, Any]) -> None:
     print(f"  Schema Compliance Rate: {metrics['schema_compliance_rate']:.2%}")
     print(f"  JSON Parse Rate: {metrics['json_parse_rate']:.2%}")
     print("\n  Error rates by number of questions:")
-    for n_questions, error_rate in metrics['num_question_error_rate'].items():
+    for n_questions, error_rate in metrics["num_question_error_rate"].items():
         print(f"    {n_questions} questions: {error_rate:.2%}")
 
-#%%
-from datasets import load_dataset
+
+# %%
+
 validation_path = "artifacts/data/mmlu"
 logger.info("Loading validation data from %s", validation_path)
-validation_data = load_dataset(validation_path)['validation']
+validation_data = load_dataset(validation_path)["validation"]
 # validation_data = validation_data.select(range(50))
 logger.info("Loaded %s validation examples", len(validation_data))
-#%%
+# %%
 logger.info("Evaluating fine-tuned model...")
 try:
     fine_tuned_model, fine_tuned_tokenizer = load_model("artifacts/fused-model")
@@ -177,16 +188,15 @@ except Exception as e:
 
 #%%
 base_model = os.getenv("BASE_LLM", "meta-llama/Llama-3.2-3B-Instruct")
+# %%
 logger.info("Evaluating base model: %s", base_model)
 try:
-    base_model_loaded, base_tokenizer = load_model(base_model)
-    base_results = evaluate_model(
-        base_model_loaded, base_tokenizer, validation_data
-    )
+    base_model_loaded, base_tokenizer = load(base_model)
+    base_results = evaluate_model(base_model_loaded, base_tokenizer, validation_data)
 except Exception as e:
     logger.error("Error evaluating base model: %s", e)
     base_results = None
-#%%
+# %%
 print("\n" + "=" * 80)
 print("EVALUATION RESULTS")
 print("=" * 80)
