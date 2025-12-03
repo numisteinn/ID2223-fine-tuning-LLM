@@ -11,4 +11,5 @@ wheels/
 
 # Caches and model files
 artifacts/
-
+.idea/
+.env/
