@@ -1,3 +1,0 @@
-streamlit
-llama-cpp-python
-huggingface_hub
