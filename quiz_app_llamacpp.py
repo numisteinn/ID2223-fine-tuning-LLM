@@ -130,7 +130,6 @@ with st.sidebar:
     )
     
     st.divider()
-    st.caption(f"Model: `{MODEL_REPO}`")
 
 # Load model
 try:
