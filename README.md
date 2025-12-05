@@ -118,6 +118,16 @@ We implemented a two-phase fine-tuning strategy to build both general instructio
 - Emphasized consistent multiple-choice question generation with proper schema adherence
 - Used MMLU dataset to reinforce structured output capabilities
 
+Comparison of models before and after fine-tuning:
+
+| Model                            | FineTome100 fine-tuned perplexity | FineTome100 + Quiz dataset fine-tuned perplexity |
+| -------------------------------- | ------------------- | -------------------------- |
+| meta-llama-Llama-3.2-1B-Instruct | 7.233               | 4.69                       |
+| meta-llama-Llama-3.2-3B-Instruct | 6.089               | 4.333                      |
+| Qwen-Qwen2.5-3B-Instruct         | 5.295               | 3.879                      |
+
+HumanEval of outputs: See [Google Sheet](https://docs.google.com/spreadsheets/d/1l2cvS0YvGhhtE06A3u19ZMQ5MjTkHYBd94hRfxM-KQk/)
+
 ### Model-Centric and Data-Centric Iteration to Improve Model Performance
 
 We employed both model-centric and data-centric approaches to enhance our fine-tuned LLM:
