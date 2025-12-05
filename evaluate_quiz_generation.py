@@ -2,6 +2,7 @@
 import re
 from datasets import load_dataset
 import json
+import csv
 from mlx_lm import generate
 from mlx_lm.utils import load
 import logging
@@ -102,7 +103,6 @@ def evaluate_model(
     verbose=False,
 ) -> Dict[str, Any]:
     """Evaluate a model on validation data."""
-    max_tokens: int = 1024
     print(f"Evaluating model on {len(validation_data)} examples...")
     total_examples = len(validation_data)
     valid_json_count = 0
@@ -128,7 +128,9 @@ def evaluate_model(
 
         prompt = construct_prompt(str(question_msg))
         if i % 50 == 0 or verbose:
-            print(f"Evaluating example {i+1} of {total_examples}")
+            print(f"Evaluating example {i + 1} of {total_examples}")
+
+        max_tokens: int = 512
         answer_msg = generate(model, tokenizer, prompt, max_tokens=max_tokens)
         validated_json = validate_json_and_schema(validator, answer_msg)
 
@@ -169,58 +171,47 @@ def print_model_report(label: str, metrics: dict[str, Any]) -> None:
 
 
 # %%
-
 validation_path = "artifacts/data/mmlu"
 logger.info("Loading validation data from %s", validation_path)
 validation_data = load_dataset(validation_path)["validation"]
 # validation_data = validation_data.select(range(50))
 logger.info("Loaded %s validation examples", len(validation_data))
 # %%
-logger.info("Evaluating fine-tuned model...")
-try:
-    fine_tuned_model, fine_tuned_tokenizer = load_model("artifacts/fused-model")
+base_models = [
+    "meta-llama/Llama-3.2-1B-Instruct",
+    "meta-llama/Llama-3.2-3B-Instruct",
+    "Qwen/Qwen2.5-3B-Instruct",
+]
+results = []
+for base_model in base_models:
+    logger.info("Evaluating base model: %s", base_model)
+    base_model_loaded, base_tokenizer = load(base_model)
+    base_results = evaluate_model(base_model_loaded, base_tokenizer, validation_data, verbose=True)
+    results.append({"model": base_model, **base_results})
+    model_id = base_model.replace("/", "-")
+    logger.info("Evaluating fine-tuned model...")
+    fine_tuned_model, fine_tuned_tokenizer = load_model(
+        f"artifacts/fused/{model_id}_train1_train2"
+    )
     fine_tuned_results = evaluate_model(
         fine_tuned_model, fine_tuned_tokenizer, validation_data, verbose=True
     )
-except Exception as e:
-    logger.error("Error evaluating fine-tuned model: %s", e)
-    fine_tuned_results = None
-
-#%%
-base_model = os.getenv("BASE_LLM", "meta-llama/Llama-3.2-3B-Instruct")
+    results.append(
+        {"model": f"{model_id}_fine_tuned", **fine_tuned_results}
+    )
 # %%
-logger.info("Evaluating base model: %s", base_model)
-try:
-    base_model_loaded, base_tokenizer = load(base_model)
-    base_results = evaluate_model(base_model_loaded, base_tokenizer, validation_data)
-except Exception as e:
-    logger.error("Error evaluating base model: %s", e)
-    base_results = None
-# %%
-print("\n" + "=" * 80)
-print("EVALUATION RESULTS")
-print("=" * 80)
-print_model_report("FINE-TUNED MODEL", fine_tuned_results)
-print_model_report("BASE MODEL", base_results)
-
-# Show improvement if both models evaluated
-if fine_tuned_results and base_results:
-    print("\nIMPROVEMENT (Fine-tuned vs Base):")
-    comparisons = [
-        (
-            "Schema Compliance",
-            fine_tuned_results["schema_compliance_rate"],
-            base_results["schema_compliance_rate"],
-        ),
-        (
-            "JSON Parse Rate",
-            fine_tuned_results["json_parse_rate"],
-            base_results["json_parse_rate"],
-        ),
+with open("json_schema/evaluation_results.csv", "w", newline="") as csvfile:
+    fieldnames = [
+        "model",
+        "schema_compliance_rate",
+        "json_parse_rate",
+        "num_question_error_rate",
     ]
-
-    for label, fine_value, base_value in comparisons:
-        delta = fine_value - base_value
-        print(f"  {label}: {delta:+.2%}")
-
-print("\n" + "=" * 80)
+    writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+    writer.writeheader()
+    for result in results:
+        result_copy = result.copy()
+        result_copy["num_question_error_rate"] = json.dumps(
+            result["num_question_error_rate"]
+        )
+        writer.writerow(result_copy)
