@@ -1,0 +1,6 @@
+build-essential
+cmake
+gcc
+g++
+python3-dev
+libopenblas-dev
