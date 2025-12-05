@@ -321,7 +321,7 @@ requires-dist = [
     { name = "huggingface-hub", specifier = ">=0.36.0" },
     { name = "ipykernel", specifier = ">=7.1.0" },
     { name = "jsonschema", specifier = ">=4.25.1" },
-    { name = "llama-cpp-python", specifier = ">=0.3.16" },
+    { name = "llama-cpp-python", specifier = ">=0.3.2" },
     { name = "mlx-lm", extras = ["train"], specifier = ">=0.28.3" },
     { name = "sentencepiece", specifier = ">=0.2.1" },
     { name = "streamlit", specifier = ">=1.41.1" },
