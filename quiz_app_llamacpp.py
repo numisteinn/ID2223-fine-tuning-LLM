@@ -15,8 +15,8 @@ st.set_page_config(
 )
 
 # Model path (fallback if local not found)
-MODEL_REPO = "markvincevarga/mouse"
-MODEL_FILE = "Llama-3.2-1B-Instruct_train1_train_2.gguf"
+MODEL_REPO = "unsloth/Llama-3.2-1B-Instruct-GGUF"
+MODEL_FILE = "Llama-3.2-1B-Instruct-Q4_K_M.gguf"
 
 @st.cache_resource
 def load_model():
